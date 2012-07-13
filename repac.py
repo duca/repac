@@ -32,17 +32,17 @@ def main():
     arguments(sys.argv)
     
     if(arglist['nthreads'] == 0 ):
-        ncores = 1
+        nthreads = 1
     else:
-        ncores = arglist['nthreads'] 
+        nthreads = arglist['nthreads'] 
     
-    worker = Pool(ncores) #set the number of threads within the pool
+    worker = Pool(1) #set the number of threads within the pool
     ins = installed.installed()    
     dest = arglist["destination"]
     
     completeList = ins.pathList()
     if(arglist['verbose']):
-        string = "\nRepackaging using " + str(ncores) +" threads \n\t Use the -n option to change number of workers \n"
+        string = "\nRepackaging using " + str(nthreads) +" threads \n\t Use the -n option to change number of workers \n"
         print(string)
         local = ins.local
     else:
