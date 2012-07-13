@@ -24,7 +24,7 @@
 class package:
     
     """Pacman package class
-        v0.0.1
+        v0.0.2
      """
     
     def __init__(self, pkgPath, pkgDest=None):
@@ -39,7 +39,7 @@ class package:
         self.files=[]
         self.desc = collections.OrderedDict()
         self.descArrays = collections.OrderedDict()        
-        self.version = '0.0.1'
+        self.version = '0.0.2'
         self.desc['pkgname']=  ''
         self.desc['pkgver']= ''
         self.desc['pkgdesc']= ''
