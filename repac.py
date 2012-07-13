@@ -21,7 +21,7 @@
 #       MA 02110-1301, USA.
 #       
 #  
-arglist = {'destination': None, 'verbose':False, "ncores": 0}
+arglist = {'destination': None, 'verbose':False, "nthreads": 0}
 local = None 
 def main():    
     import installed
@@ -31,10 +31,10 @@ def main():
     #analyse arguments
     arguments(sys.argv)
     
-    if(arglist['ncores'] == 0 ):
+    if(arglist['nthreads'] == 0 ):
         ncores = 1
     else:
-        ncores = arglist['ncores'] 
+        ncores = arglist['nthreads'] 
     
     worker = Pool(ncores) #set the number of threads within the pool
     ins = installed.installed()    
@@ -42,9 +42,12 @@ def main():
     
     completeList = ins.pathList()
     if(arglist['verbose']):
-        string = "\nRepackaging using " + str(ncores) +" cores \n\t Use the -n option to change number of cores \n"
+        string = "\nRepackaging using " + str(ncores) +" threads \n\t Use the -n option to change number of workers \n"
         print(string)
         local = ins.local
+    else:
+        string = "\nRepackaging silently using " + str(ncores) +" threads \n\t Use the -n option to change number of workers \n"
+        print(string)
     
     worker.map(job, completeList)        
     
@@ -65,7 +68,7 @@ def arguments(items):
         if arg == '-v':
             arglist['verbose']=True            
         if arg == '-n':
-            arglist['ncores']=int(items[i+1])
+            arglist['nthreads']=int(items[i+1])
         if arg == '-h':
             stopExec()
             exit()
