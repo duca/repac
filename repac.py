@@ -36,7 +36,7 @@ def main():
     else:
         nthreads = arglist['nthreads'] 
     
-    worker = Pool(1) #set the number of threads within the pool
+    worker = Pool(nthreads) #set the number of threads within the pool
     ins = installed.installed()    
     dest = arglist["destination"]
     
@@ -46,10 +46,11 @@ def main():
         print(string)
         local = ins.local
     else:
-        string = "\nRepackaging silently using " + str(ncores) +" threads \n\t Use the -n option to change number of workers \n"
+        string = "\nRepackaging silently using " + str(nthreads) +" threads \n\t Use the -n option to change number of workers \n"
         print(string)
     
-    worker.map(job, completeList)        
+    worker.map(job, completeList)
+        
     
 def job(item):
     import package
