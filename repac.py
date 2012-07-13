@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 #
 #       repac
@@ -21,26 +21,40 @@
 #       MA 02110-1301, USA.
 #       
 #  
-arglist = {'destination': None, 'verbose':False } 
+arglist = {'destination': None, 'verbose':False, "ncores": 0}
+local = None 
 def main():    
-    import installed, package
+    import installed
     import sys
-    ins = installed.installed()
-    
-    dest = arglist["destination"]
-    
+    from multiprocessing import Pool
+
     #analyse arguments
     arguments(sys.argv)
+    
+    if(arglist['ncores'] == 0 ):
+        ncores = 1
+    else:
+        ncores = arglist['ncores'] 
+    
+    worker = Pool(ncores) #set the number of threads within the pool
+    ins = installed.installed()    
+    dest = arglist["destination"]
+    
     completeList = ins.pathList()
     if(arglist['verbose']):
-        print("Repackaging:")
-    for item in completeList:
-        
-        if(arglist['verbose']):
-            print(item.strip(ins.local))
-        pk= package.package(item,arglist["destination"])
-        pk.make()
-
+        string = "\nRepackaging using " + str(ncores) +" cores \n\t Use the -n option to change number of cores \n"
+        print(string)
+        local = ins.local
+    
+    worker.map(job, completeList)        
+    
+def job(item):
+    import package
+    if(arglist['verbose']):
+        print(item.strip(local))
+    pk= package.package(item,arglist["destination"])
+    pk.make()
+    
 def arguments(items):
     from sys import exit
     for i in range(0,len(items)):
@@ -49,7 +63,9 @@ def arguments(items):
         if arg == '-p':
             arglist["destination"] = items[i+1]
         if arg == '-v':
-            arglist['verbose']=True
+            arglist['verbose']=True            
+        if arg == '-n':
+            arglist['ncores']=int(items[i+1])
         if arg == '-h':
             stopExec()
             exit()
@@ -60,6 +76,7 @@ Repac will generate a .pkg.tar.gz from all your installed packages
 
 Options are: 
 -p \t complete path (example /home/user/packages)
+-n \t int  (number of cores to use)
 -v \t verbose mode
 -h \t this message
 ''')
