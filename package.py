@@ -37,6 +37,7 @@ class package:
             self.pkgDest = pkgDest
 
         self.files=[]
+        self.install = []
         self.desc = collections.OrderedDict()
         self.descArrays = collections.OrderedDict()        
         self.version = '0.0.2'
@@ -52,6 +53,7 @@ class package:
         self.descArrays['backup'] = []
         self.descArrays['depend'] = []
         self.descArrays['optdepend'] = []
+        self.descArrays['conflict'] = []
         self.baselist = {'pkgname':'%NAME%', 'pkgver':'%VERSION%', 'pkgdesc':'%DESC%', 'replaces':'%REPLACES%', 
                      'url':'%URL%', 'license':'%LICENSE%', 'arch':'%ARCH%', 'builddate':'%BUILDDATE%', 
                      'packager':'%PACKAGER%', 'size':'%SIZE%', 'depend':'%DEPENDS%', 'provides':'%PROVIDES%'}
@@ -66,20 +68,21 @@ class package:
         #Parse files
         self.parseDesc()
         self.parseFiles()
+        if(self.parseINSTALL()):
+            self.createINSTALL()
         
         #Create PKGINFO inside the temporary directory 
         self.createPKGINFO()
         name = self.desc["pkgname"] + "-" + self.desc["pkgver"]+".pkg.tar.bz2"
         completePath = os.path.join(self.pkgDest, name)
-        pkg = tarfile.open(completePath, mode="w:bz2")
+        pkg = tarfile.open(completePath, mode="w:bz2", dereference=False)
         for file in self.files:
             try:
                 pkg.add(file)
             except:
                 string = "Was not able to add the " + file + " of package: " + self.desc['pkgname']+ "\n Please run repac again as root"
                 sys.stderr.write(string)
-                #sys.exit()
-                
+                #sys.exit()            
         pkg.close()
         td.dissolve()
 
@@ -110,12 +113,22 @@ class package:
                         sys.stderr.write("Could not convert data at package.py line 107")
                         #sys.exit()
         self.pkginfo.close()
+    
+    def createINSTALL(self):
+        import os, os.path, sys
+        installFile = open(".INSTALL",mode='w')
+        
+        for line in self.install:
+            installFile.write(line)
+        installFile.close()               
+        self.files.append(".INSTALL")
                 
         
     def parseDesc(self):
         import os.path
         depends = []
         optdepends = []
+        conflicts = []
         path = os.path.join(self.path,"desc")
         df = open(path,mode='r')
         content = df.readlines()
@@ -134,12 +147,35 @@ class package:
             if(content[i].rfind("%OPTDEPENDS%") >= 0):
                 for k in range(i+1,len(content)-1):
                     try:
+                        if(content[i].rfind("%CONFLICTS%") >= 0):
+                            break
+                        optdepends.append(content[k].strip("\n"))
+                    except:
+                        break
+            if(content[i].rfind("%CONFLICTS%") >= 0):
+                for j in range(i+1,len(content)-1):
+                    try:
                         optdepends.append(content[k].strip("\n"))
                     except:
                         break
         self.descArrays['depend'] = depends
         self.descArrays['optdepend'] = optdepends
+        self.descArrays['conflict'] = conflicts
         
+    def parseINSTALL(self):
+        import os.path
+        path = os.path.join(self.path,"install")
+        installFlag = False        
+        try:
+            fi = open(path, mode='r')
+            self.install= fi.readlines()
+            
+            installFlag = True
+        except:
+            
+            installFlag = False
+        return installFlag
+   
     def parseFiles(self):
         import os.path
         backup = []
@@ -156,6 +192,7 @@ class package:
         
         for i in range(0,len(content)):
             item = content[i]
+            #remove pure directory  entries otherwise the tar file will be imense in some cases
             if(os.path.isdir(item) == False):
                 if(item.rfind("BACKUP")>= 0):
                     for j in range(i+1,len(content)):
@@ -163,6 +200,11 @@ class package:
                     break
                 else:
                     self.files.append(item)
+            #If item is a symlink to a directory, add it anyway (usecase lib64 -> lib in glibc)
+            elif(os.path.islink(item) == True):
+                self.files.append(item)
+        for item in self.files:
+            print(item)
         pkgInfoPath = ".PKGINFO"
         self.files.append(pkgInfoPath)
         self.descArrays["backup"]=backup   
@@ -170,7 +212,13 @@ class package:
 def main():    
     import installed
     ins = installed.installed()
-    pk= package(ins.pathList()[0])
+    installedPkgs = ins.pathList()
+    
+    for i in range(0, len(installedPkgs)):
+        if(installedPkgs[i].rfind("glibc") >= 0):
+            glibc = i
+            break
+    pk= package(installedPkgs[glibc])
     pk.make()
     
 if __name__ == '__main__':
