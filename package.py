@@ -24,7 +24,7 @@
 class package:
     
     """Pacman package class
-        v0.0.2
+        v0.0.3
      """
     
     def __init__(self, pkgPath, pkgDest=None):
@@ -40,7 +40,7 @@ class package:
         self.install = []
         self.desc = collections.OrderedDict()
         self.descArrays = collections.OrderedDict()        
-        self.version = '0.0.2'
+        self.version = '0.0.3'
         self.desc['pkgname']=  ''
         self.desc['pkgver']= ''
         self.desc['pkgdesc']= ''
@@ -54,6 +54,7 @@ class package:
         self.descArrays['depend'] = []
         self.descArrays['optdepend'] = []
         self.descArrays['conflict'] = []
+        self.descArrays['provides'] = []
         self.baselist = {'pkgname':'%NAME%', 'pkgver':'%VERSION%', 'pkgdesc':'%DESC%', 'replaces':'%REPLACES%', 
                      'url':'%URL%', 'license':'%LICENSE%', 'arch':'%ARCH%', 'builddate':'%BUILDDATE%', 
                      'packager':'%PACKAGER%', 'size':'%SIZE%', 'depend':'%DEPENDS%', 'provides':'%PROVIDES%'}
@@ -80,7 +81,7 @@ class package:
             try:
                 pkg.add(file)
             except:
-                string = "Was not able to add the " + file + " of package: " + self.desc['pkgname']+ "\n Please run repac again as root"
+                string = "Was not able to add the " + file + " of package: " + self.desc['pkgname']+ "\n Please run repac again as root \n"
                 sys.stderr.write(string)
                 #sys.exit()            
         pkg.close()
@@ -129,6 +130,7 @@ class package:
         depends = []
         optdepends = []
         conflicts = []
+        provides = []
         path = os.path.join(self.path,"desc")
         df = open(path,mode='r')
         content = df.readlines()
@@ -139,28 +141,52 @@ class package:
                 if(content[i].rfind(self.baselist[item]) >=0):
                     self.desc[item] = content[i+1].strip('\n')                    
             if(content[i].rfind("%DEPENDS%") >= 0):
-                for j in range(i+1,len(content)-1):
-                    try:
-                        depends.append(content[j].strip("\n"))
-                    except:
+                k = i+1
+                while(self.keyWord(content[k])):
+                    depends.append(content[k].strip('\n'))
+                    k+=1
+                    if(k >= len(content)):
                         break
             if(content[i].rfind("%OPTDEPENDS%") >= 0):
-                for k in range(i+1,len(content)-1):
-                    try:
-                        if(content[i].rfind("%CONFLICTS%") >= 0):
-                            break
-                        optdepends.append(content[k].strip("\n"))
-                    except:
+                k = i+1
+                while(self.keyWord(content[k])):
+                    optdepends.append(content[k].strip('\n'))
+                    k+=1
+                    if(k >= len(content)):
                         break
             if(content[i].rfind("%CONFLICTS%") >= 0):
-                for j in range(i+1,len(content)-1):
-                    try:
-                        optdepends.append(content[k].strip("\n"))
-                    except:
+                k = i+1
+                while(self.keyWord(content[k])):
+                    conflicts.append(content[k].strip('\n'))
+                    k+=1
+                    if(k >= len(content)):
+                        break
+            if(content[i].rfind("%PROVIDES%") >= 0):
+                k = i+1
+                while(self.keyWord(content[k])):
+                    provides.append(content[k].strip('\n'))
+                    k+=1
+                    if(k >= len(content)):
                         break
         self.descArrays['depend'] = depends
         self.descArrays['optdepend'] = optdepends
         self.descArrays['conflict'] = conflicts
+        self.descArrays['provides'] = provides
+    def keyWord(self, word):
+        key = True
+            
+        if(word.rfind("%CONFLICTS%") > -1):
+            return False
+        elif(word.rfind("%PROVIDES%") > -1):
+            return False
+        elif(word.rfind("%OPTDEPENDS%") > -1):
+            return False
+        elif(word.rfind("%DEPENDS%") > -1):
+            return False
+        elif(word == "\n"):
+            return False
+        
+        return True
         
     def parseINSTALL(self):
         import os.path
@@ -172,7 +198,6 @@ class package:
             
             installFlag = True
         except:
-            
             installFlag = False
         return installFlag
    
@@ -198,13 +223,13 @@ class package:
                     for j in range(i+1,len(content)):
                         backup.append(item)
                     break
-                else:
+                elif(os.path.isfile(item)):
                     self.files.append(item)
             #If item is a symlink to a directory, add it anyway (usecase lib64 -> lib in glibc)
             elif(os.path.islink(item) == True):
                 self.files.append(item)
-        for item in self.files:
-            print(item)
+#        for item in self.files:
+#            print(item)
         pkgInfoPath = ".PKGINFO"
         self.files.append(pkgInfoPath)
         self.descArrays["backup"]=backup   
@@ -215,10 +240,10 @@ def main():
     installedPkgs = ins.pathList()
     
     for i in range(0, len(installedPkgs)):
-        if(installedPkgs[i].rfind("glibc") >= 0):
-            glibc = i
+        if(installedPkgs[i].rfind("mendeley") >= 0):
+            pkgIndex = i
             break
-    pk= package(installedPkgs[glibc])
+    pk= package(installedPkgs[pkgIndex])
     pk.make()
     
 if __name__ == '__main__':
