@@ -1,45 +1,51 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
-#
+
 #       repac
-#       
+#
 #       Copyright 2012 Eduardo Martins Lopes <edumloeps@gmail.com>
-#       
+#
 #       This program is free software; you can redistribute it and/or modify
 #       it under the terms of the GNU General Public License as published by
 #       the Free Software Foundation; either version 2 of the License, or
 #       (at your option) any later version.
-#       
+#
 #       This program is distributed in the hope that it will be useful,
 #       but WITHOUT ANY WARRANTY; without even the implied warranty of
 #       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #       GNU General Public License for more details.
-#       
+#
 #       You should have received a copy of the GNU General Public License
 #       along with this program; if not, write to the Free Software
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
-#       
-#      THIS FILE IS PART OF repac
-class package:
-    
+
+
+class Package:
+
     """Pacman package class
         v0.0.3
      """
-    
-    def __init__(self, pkgPath, pkgDest=None):
+
+    def __init__(self, pkgPath, pkgDest=None, compression=None):
         import collections, os, tempdir
-        
-        self.path = pkgPath              
+
+        self.path = pkgPath
         if(pkgDest == None):
             self.pkgDest= os.getcwd()
         else:
             self.pkgDest = pkgDest
+        if(compression == None) or (compression == "bz2"):
+          self.comp = "w:bz2"
+        elif(compression == 'gz'):
+          self.comp = "w:gz"
+        elif(compression == 'tar'):
+          self.comp == 'w'
 
         self.files=[]
         self.install = []
         self.desc = collections.OrderedDict()
-        self.descArrays = collections.OrderedDict()        
+        self.descArrays = collections.OrderedDict()
         self.version = '0.0.3'
         self.desc['pkgname']=  ''
         self.desc['pkgver']= ''
@@ -55,8 +61,8 @@ class package:
         self.descArrays['optdepend'] = []
         self.descArrays['conflict'] = []
         self.descArrays['provides'] = []
-        self.baselist = {'pkgname':'%NAME%', 'pkgver':'%VERSION%', 'pkgdesc':'%DESC%', 'replaces':'%REPLACES%', 
-                     'url':'%URL%', 'license':'%LICENSE%', 'arch':'%ARCH%', 'builddate':'%BUILDDATE%', 
+        self.baselist = {'pkgname':'%NAME%', 'pkgver':'%VERSION%', 'pkgdesc':'%DESC%', 'replaces':'%REPLACES%',
+                     'url':'%URL%', 'license':'%LICENSE%', 'arch':'%ARCH%', 'builddate':'%BUILDDATE%',
                      'packager':'%PACKAGER%', 'size':'%SIZE%', 'depend':'%DEPENDS%', 'provides':'%PROVIDES%'}
     def make(self):
         import tarfile, bz2, os.path, sys, os
@@ -65,25 +71,25 @@ class package:
         td = tempdir.TempDir()
         tempPath = td.name
         os.chdir(tempPath)
-        
+
         #Parse files
         self.parseDesc()
         self.parseFiles()
         if(self.parseINSTALL()):
             self.createINSTALL()
-        
-        #Create PKGINFO inside the temporary directory 
+
+        #Create PKGINFO inside the temporary directory
         self.createPKGINFO()
         name = self.desc["pkgname"] + "-" + self.desc["pkgver"]+".pkg.tar.bz2"
         completePath = os.path.join(self.pkgDest, name)
-        pkg = tarfile.open(completePath, mode="w:bz2", dereference=False)
+        pkg = tarfile.open(completePath, mode=self.comp, dereference=False)
         for file in self.files:
             try:
                 pkg.add(file)
             except:
                 string = "Was not able to add the " + file + " of package: " + self.desc['pkgname']+ "\n Please run repac again as root \n"
                 sys.stderr.write(string)
-                #sys.exit()            
+                #sys.exit()
         pkg.close()
         td.dissolve()
 
@@ -94,15 +100,15 @@ class package:
         self.pkginfo.write(string)
         string = "# Written by duca < edumlopes at yahoo.com.br >" + "\n"
         self.pkginfo.write(string)
-                
+
         for item in self.desc:
             try:
                 string = str(item) + ' = ' + str(self.desc[item]) + "\n"
                 self.pkginfo.write(string)
-            except: 
+            except:
                 sys.stderr.write("Could not convert data at package.py line 97")
                 #sys.exit()
-        
+
         for item in self.descArrays:
             array = self.descArrays[item]
             if(len(array) > 0):
@@ -114,17 +120,17 @@ class package:
                         sys.stderr.write("Could not convert data at package.py line 107")
                         #sys.exit()
         self.pkginfo.close()
-    
+
     def createINSTALL(self):
         import os, os.path, sys
         installFile = open(".INSTALL",mode='w')
-        
+
         for line in self.install:
             installFile.write(line)
-        installFile.close()               
+        installFile.close()
         self.files.append(".INSTALL")
-                
-        
+
+
     def parseDesc(self):
         import os.path
         depends = []
@@ -135,11 +141,11 @@ class package:
         df = open(path,mode='r')
         content = df.readlines()
         i = 0
-        
-        for i in range(len(content)):            
+
+        for i in range(len(content)):
             for item in self.desc:
                 if(content[i].rfind(self.baselist[item]) >=0):
-                    self.desc[item] = content[i+1].strip('\n')                    
+                    self.desc[item] = content[i+1].strip('\n')
             if(content[i].rfind("%DEPENDS%") >= 0):
                 k = i+1
                 while(self.keyWord(content[k])):
@@ -174,7 +180,7 @@ class package:
         self.descArrays['provides'] = provides
     def keyWord(self, word):
         key = True
-            
+
         if(word.rfind("%CONFLICTS%") > -1):
             return False
         elif(word.rfind("%PROVIDES%") > -1):
@@ -185,36 +191,36 @@ class package:
             return False
         elif(word == "\n"):
             return False
-        
+
         return True
-        
+
     def parseINSTALL(self):
         import os.path
         path = os.path.join(self.path,"install")
-        installFlag = False        
+        installFlag = False
         try:
             fi = open(path, mode='r')
             self.install= fi.readlines()
-            
+
             installFlag = True
         except:
             installFlag = False
         return installFlag
-   
+
     def parseFiles(self):
         import os.path
         backup = []
         path = os.path.join(self.path,"files")
-        ff = open(path,mode='r')        
+        ff = open(path,mode='r')
         content = ff.readlines()
-        
+
         for i in range(1, len(content)):
-            content[i] = "/"+content[i].strip('\n')            
+            content[i] = "/"+content[i].strip('\n')
         try:
             content.pop(0) #removes the first line
         except:
             pass
-        
+
         for i in range(0,len(content)):
             item = content[i]
             #remove pure directory  entries otherwise the tar file will be imense in some cases
@@ -232,21 +238,19 @@ class package:
 #            print(item)
         pkgInfoPath = ".PKGINFO"
         self.files.append(pkgInfoPath)
-        self.descArrays["backup"]=backup   
-                            
-def main():    
+        self.descArrays["backup"]=backup
+
+def main():
     import installed
-    ins = installed.installed()
+    ins = installed.Installed()
     installedPkgs = ins.pathList()
-    
+
     for i in range(0, len(installedPkgs)):
         if(installedPkgs[i].rfind("mendeley") >= 0):
             pkgIndex = i
             break
-    pk= package(installedPkgs[pkgIndex])
+    pk= Package(installedPkgs[pkgIndex])
     pk.make()
-    
+
 if __name__ == '__main__':
     main()
-    
-
